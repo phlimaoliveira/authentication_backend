@@ -7,12 +7,19 @@ from flask_jwt_extended import JWTManager, jwt_required, unset_jwt_cookies, set_
 from flask_mongoengine import MongoEngine
 from ORM.TokenBlocklist import TokenBlocklist
 from core.ManageTokenBlocklist import ManageTokenBlocklist
+from flask_mail import Mail
 
 from core.ManageUsers import ManageUsers, userExists
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates')
 app.config['JWT_SECRET_KEY'] = os.getenv('SECRET_KEY')
 jwt = JWTManager(app)
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
+app.config['MAIL_PORT'] = os.getenv('MAIL_PORT')
+app.config['MAIL_USE_SSL'] = os.getenv('MAIL_USE_SSL')
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+mail = Mail(app)
 
 load_dotenv()
 CORS(app)
@@ -54,6 +61,25 @@ def register():
     password = str(data.get('password'))
 
     return ManageUsers.newUser(name, email, password)
+
+@app.route('/forgot_password', methods=['POST'])
+def forgotPassword():
+    data = request.get_json()
+    email = data.get('email')
+    reset_token = ManageUsers.forgotPassword(email)
+    return ManageUsers.sendMailForgotPassword(reset_token, email, app, mail)
+
+@app.route('/reset_password', methods=['POST'])
+@jwt_required()
+def reset_password():
+    data = request.get_json()
+    jwt_payload = get_jwt()["sub"]
+    reset_password = jwt_payload.get('reset_password')
+    email = jwt_payload.get('email')
+    new_password = data.get('password')
+    if(reset_password):
+        return ManageUsers.updatePassword(email, new_password)
+    return Response("Token invalid for reset password! Please try again", 401)
 
 @app.route('/verify_email_user/<email>', methods=['GET'])
 def verifyEmailUserExists(email):

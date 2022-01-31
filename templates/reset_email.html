@@ -1,0 +1,11 @@
+<!doctype html>
+<title>{% block title %}{% endblock %}Recuperar Senha</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='templates/css/style.css') }}">
+<nav>
+  <h1>Recuperar Senha</h1>
+  <ul>
+    {% if reset_token %}
+      Por favor, <span><a href="http://localhost:8080/reset_password/{{ reset_token }}">clique aqui</a></span> para Recuperar a sua Senha
+    {% endif %}
+  </ul>
+</nav>
